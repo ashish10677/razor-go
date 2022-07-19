@@ -7,6 +7,7 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/ethereum/go-ethereum v1.10.8
 	github.com/gocolly/colly v1.2.0
+	github.com/joho/godotenv v1.4.0
 	github.com/magiconair/properties v1.8.4
 	github.com/manifoldco/promptui v0.8.0
 	github.com/miguelmota/go-solidity-sha3 v0.1.1

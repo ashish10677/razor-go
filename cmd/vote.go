@@ -2,12 +2,15 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -25,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 	"github.com/spf13/cobra"
 )
@@ -264,6 +268,7 @@ func (*UtilsStruct) HandleBlock(client *ethclient.Client, account types.Account,
 					break
 				}
 				blockConfirmed = epoch
+				sendNotification(epoch)
 			}
 		}
 	case -1:
@@ -274,6 +279,48 @@ func (*UtilsStruct) HandleBlock(client *ethclient.Client, account types.Account,
 	}
 	razorUtils.WaitTillNextNSecs(config.WaitTime)
 	fmt.Println()
+}
+
+func sendNotification(epoch uint32) {
+	type Body struct {
+		Event string `json:"event"`
+		Epoch uint32 `json:"epoch"`
+	}
+	body := &Body{
+		Event: "Block Confirmed",
+		Epoch: epoch,
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Error("Error in loading env file:", err)
+		return
+	}
+	key := os.Getenv("key")
+	posturl := fmt.Sprintf("%s/%s", "https://maker.ifttt.com/trigger/block_confirmed/json/with/key", key)
+
+	postBody, err := json.Marshal(body)
+	if err != nil {
+		log.Error("Error in marshalling data to send notification to phone", err)
+		return
+	}
+
+	r, err := http.NewRequest("POST", posturl, bytes.NewBuffer(postBody))
+	if err != nil {
+		log.Error("Error in creating new request:", err)
+		return
+	}
+
+	r.Header.Add("Content-Type", "application/json")
+
+	client := &http.Client{}
+	res, err := client.Do(r)
+	if err != nil {
+		log.Error("Error in sending notification to phone:", err)
+		return
+	}
+	log.Info("Notification sent successfully: ", res)
+	defer res.Body.Close()
 }
 
 //This function initiates the commit
